@@ -1,0 +1,76 @@
+from langchain_google_genai import GoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.vectorstores import InMemoryVectorStore
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class BaseRag:
+    def __init__(self, folder: str = "documents"):
+        self.folder = folder
+        self.llm = GoogleGenerativeAI(model="gemini-2.0-flash")
+        self.embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-001"
+        )
+        self.vectordb = InMemoryVectorStore(self.embeddings)
+        self.qa_chain = self._build_chain()
+
+    def chat(self):
+        chat_history = []
+        while True:
+            query = input("User: ")
+            if query.lower() in ["exit", "quit"]:
+                break
+            if query.lower() in ["clear", "cls"]:
+                chat_history = []
+                print("Chat history cleared.")
+                continue
+            result = self.qa_chain.invoke(
+                {"input": query, "chat_history": chat_history}
+            )
+            answer = result["answer"]
+            print("Assistant:", answer)
+
+            chat_history.append(HumanMessage(content=query))
+            chat_history.append(AIMessage(content=answer))
+
+    def _build_chain(self):
+        retriever = self.vectordb.as_retriever()
+
+        history_aware_retriever = create_history_aware_retriever(
+            llm=self.llm,
+            retriever=retriever,
+            prompt=ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        "Given the user query and the conversation history, rephrase the query to be more specific and relevant to the context. Do NOT answer the query, just rephrase it.",
+                    ),
+                    MessagesPlaceholder("chat_history"),
+                    ("human", "{input}"),
+                ]
+            ),
+        )
+        stuff_doc_chain = create_stuff_documents_chain(
+            llm=self.llm,
+            prompt=ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        "You are a helpful assistant, Please answer the user's query based on the context. Keep the answer concise and if the answer cannot be found in the context, Just say that you don't have enough information to answer that question \n\nContext: {context}",
+                    ),
+                    ("human", "{input}"),
+                ]
+            ),
+        )
+        return create_retrieval_chain(history_aware_retriever, stuff_doc_chain)
+
+
+if __name__ == "__main__":
+    rag = BaseRag()
+
+    rag.chat()

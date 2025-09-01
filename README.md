@@ -14,8 +14,8 @@ with three different vector stores: **ChromaDB**, **Pinecone**, and
 
 1. #### Clone repo & install deps
 ```bash
-git clone https://github.com/yourname/rag-demo.git
-cd rag-demo
+git clone https://github.com/abdulrauf8788/RAG-Pipeline.git
+cd RAG-Pipeline
 
 pip install -r requirements.txt
 ```
