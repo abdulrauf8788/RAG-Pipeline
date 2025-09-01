@@ -6,6 +6,8 @@ from langchain_core.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.vectorstores import InMemoryVectorStore
 from dotenv import load_dotenv
 
+from utils import hash_text, load_documents, split_documents
+
 load_dotenv()
 
 
@@ -18,6 +20,29 @@ class BaseRag:
         )
         self.vectordb = InMemoryVectorStore(self.embeddings)
         self.qa_chain = self._build_chain()
+
+    def sync_documents(self):
+        documents = load_documents(self.folder)
+        chunks = split_documents(documents=documents)
+
+        newly_added_chunk = []
+        existing_chunk_hashes = {
+            m.metadata.get("chunk_id") for m in self.vectordb.store.values()
+        }
+        for chunk in chunks:
+            chunk_hash = hash_text(text=chunk.page_content)
+            if chunk_hash not in existing_chunk_hashes:
+                chunk.metadata.update(
+                    {
+                        "chunk_id": chunk_hash,
+                        "source": chunk.metadata.get("source", "unknown"),
+                    }
+                )
+            newly_added_chunk.append(chunk)
+
+        if newly_added_chunk is not None:
+            self.vectordb.add_documents(newly_added_chunk)
+            print(f"Added {len(newly_added_chunk)} new chunks to the vector store.")
 
     def chat(self):
         chat_history = []
@@ -72,5 +97,7 @@ class BaseRag:
 
 if __name__ == "__main__":
     rag = BaseRag()
+
+    rag.sync_documents()
 
     rag.chat()
