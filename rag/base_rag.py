@@ -38,7 +38,7 @@ class BaseRag:
                         "source": chunk.metadata.get("source", "unknown"),
                     }
                 )
-            newly_added_chunk.append(chunk)
+                newly_added_chunk.append(chunk)
 
         if newly_added_chunk is not None:
             self.vectordb.add_documents(newly_added_chunk)
