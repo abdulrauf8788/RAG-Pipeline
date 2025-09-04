@@ -23,19 +23,19 @@ pip install -r requirements.txt
 2. #### Setup your API Keys in .env
 ```bash
 cp .env.example .env
-# Add OPENAI_API_KEY, PINECONE_API_KEY, etc.
+# Add GOOGLE_API_KEY, PINECONE_API_KEY, etc.
 ```
 
 3. #### Run and start chatting 🎉
 ```bash
 
 # Run with Chroma 
-python scripts/run_chroma.py
+python -m scripts.run_chroma
 
 # Run with Pinecone 
-python scripts/run_pinecone.py
+python -m scripts.run_pinecone
 
 # Run with FAISS 
-python scripts/run_faiss.py
+python -m scripts.run_faiss
 
 ```

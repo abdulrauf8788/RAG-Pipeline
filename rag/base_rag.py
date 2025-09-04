@@ -6,7 +6,7 @@ from langchain_core.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.vectorstores import InMemoryVectorStore
 from dotenv import load_dotenv
 
-from utils import hash_text, load_documents, split_documents
+from rag.utils import hash_text, load_documents, split_documents
 
 load_dotenv()
 
@@ -19,7 +19,7 @@ class BaseRag:
             model="models/gemini-embedding-001"
         )
         self.vectordb = InMemoryVectorStore(self.embeddings)
-        self.qa_chain = self._build_chain()
+        self.qa_chain = None
 
     def sync_documents(self):
         documents = load_documents(self.folder)
@@ -45,7 +45,13 @@ class BaseRag:
             print(f"Added {len(newly_added_chunk)} new chunks to the vector store.")
 
     def chat(self):
+        if not self.qa_chain:
+            self.qa_chain = self._build_chain()
+
         chat_history = []
+        print(
+            "You can start chatting with the assistant now! Type 'exit' or 'quit' to stop."
+        )
         while True:
             query = input("User: ")
             if query.lower() in ["exit", "quit"]:
@@ -64,7 +70,7 @@ class BaseRag:
             chat_history.append(AIMessage(content=answer))
 
     def _build_chain(self):
-        retriever = self.vectordb.as_retriever()
+        retriever = self.get_vectordb_as_retriever()
 
         history_aware_retriever = create_history_aware_retriever(
             llm=self.llm,
@@ -93,6 +99,9 @@ class BaseRag:
             ),
         )
         return create_retrieval_chain(history_aware_retriever, stuff_doc_chain)
+
+    def get_vectordb_as_retriever(self):
+        return self.vectordb.as_retriever()
 
 
 if __name__ == "__main__":
